@@ -1,0 +1,8 @@
+$kind: http-request
+description: ""
+url: http://127.0.0.1:8000/Posts
+method: POST
+body:
+  type: json
+  content: '{"title": "My New Post", "content": "This is the content of my new post."}'
+order: 1000
