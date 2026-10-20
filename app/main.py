@@ -3,6 +3,9 @@ from fastapi.params import Body
 from pydantic import BaseModel,Field
 from typing import Optional,Annotated
 from random import randrange
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import time
 
 
 
@@ -13,10 +16,26 @@ class social_media_app(BaseModel):
     title : Annotated[str, Field(description='Title is must')]
     content : Optional[str] = None
     published : bool = True
-    rating : Annotated[int, Field(gt =0,lt=5, description="This is Optional field and rate between 1-5")] = Field(default=None)
-    
+    #rating : Annotated[int, Field(gt =0,lt=5, description="This is Optional field and rate between 1-5")] = Field(default=None)
+
+
+while True:   
+    try:
+        conn = psycopg2.connect(host="localhost", database="social_media_app",user="postgres",password="admin", cursor_factory=RealDictCursor)
+        cursor = conn.cursor()
+        print("Database Connection was sucessfull")
+        break
+    except Exception as error:
+        print("Connecting to Database failed....")
+        print("Error :", error)
+        time.sleep(2)
+
+
+
+
 
 my_post_data =[ { 'title':"Title of post 1", "content":"Content of post 1", "id":1}, { 'title':"Favourite Foods", "content":"Pizza, burger", "id":2}, { 'title':"Title of post 3", "content":"Content of post 3", "id": None}]
+
 def find_post(id):
     for i in my_post_data:
         if i["id"]==id:
@@ -33,15 +52,18 @@ def first():
 
 @app.get('/Posts')
 def posts():
-    return {'message': my_post_data}
+    cursor.execute("""SELECT * FROM "Posts" """)
+    posts = cursor.fetchall()
+    print(posts)
+    return {'message': posts}
 
 @app.post('/Posts', status_code=201) # Changing the default status code from 200 OK to 201 CREATED
 def create_post(Post: social_media_app):
-    post_dict = Post.dict()
-    post_dict['id']= randrange(0,10000000)
-
-    my_post_data.append(post_dict)
-    return {'message':my_post_data}
+    cursor.execute("""INSERT INTO "Posts" (title, content, published) VALUES(%s, %s, %s) RETURNING *""",
+                    (Post.title, Post.content, Post.published))
+    new_post = cursor.fetchone()
+    conn.commit()
+    return {'message': new_post}
 
 
 @app.get("/Posts/{id}")
