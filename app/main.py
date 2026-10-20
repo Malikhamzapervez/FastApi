@@ -67,39 +67,33 @@ def create_post(Post: social_media_app):
 
 
 @app.get("/Posts/{id}")
-def get_post(id:int, response:Response):
-    x = find_post(id)
-    if not x:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found") # if post not exist 
-   #     response.status_code=status.HTTP_404_NOT_FOUND
-   #     return {"Error" : f"Post with id {x} was not found"}
-        
-
-    return {"Pop-up" : f"Here is the post{x}"}
+def get_post(id: int):
+    cursor.execute("""SELECT * FROM "Posts" WHERE id = %s""", (id,))
+    post = cursor.fetchone()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
+    return {"data": post}
 
 
 
-@app.delete("/Post/{id}", status_code =status.HTTP_204_NO_CONTENT)
-def delete_post(id:int):
-    index  = find_index(id)
-
-    if index == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
-    my_post_data.pop(index)
+@app.delete("/Post/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(id: int):
+    cursor.execute("""DELETE FROM "Posts" WHERE id = %s RETURNING *""", (id,))
+    deleted = cursor.fetchone()
+    conn.commit()
+    if deleted is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.put("/Posts/{id}")
-def update_post(id:int, post:social_media_app):
-
-    index  = find_index(id)
-    
-    if index == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    post_dict = post.dict()
-    post_dict['id']=id
-    my_post_data[index] = post_dict
-    return {"data":post_dict}
+def update_post(id: int, post: social_media_app):
+    cursor.execute("""UPDATE "Posts" SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
+                   (post.title, post.content, post.published, id))
+    updated_post = cursor.fetchone()
+    conn.commit()
+    if updated_post is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
+    return {"data": updated_post}
 
 
