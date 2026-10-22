@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel,Field
 from typing import Optional,Annotated
@@ -6,11 +6,16 @@ from random import randrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
+from sqlalchemy.orm import Session
+from . import models
+from .database import engine, SessionLocal, get_db, Base
 
 
-
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+
 
 class social_media_app(BaseModel):
     title : Annotated[str, Field(description='Title is must')]
@@ -96,4 +101,8 @@ def update_post(id: int, post: social_media_app):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
     return {"data": updated_post}
 
+
+@app.get("/sqlalchemy")
+def dummy(db : Session = Depends(get_db)):
+    return {'message':'Sucessfully'}
 
