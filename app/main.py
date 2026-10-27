@@ -35,10 +35,6 @@ while True:
         print("Error :", error)
         time.sleep(2)
 
-
-
-
-
 my_post_data =[ { 'title':"Title of post 1", "content":"Content of post 1", "id":1}, { 'title':"Favourite Foods", "content":"Pizza, burger", "id":2}, { 'title':"Title of post 3", "content":"Content of post 3", "id": None}]
 
 def find_post(id):
@@ -56,53 +52,74 @@ def first():
     return {'message': 'First! Endpoint hit'}
 
 @app.get('/Posts')
-def posts():
-    cursor.execute("""SELECT * FROM "Posts" """)
-    posts = cursor.fetchall()
-    print(posts)
-    return {'message': posts}
+def posts(db: Session = Depends(get_db)):
+    Postss = db.query(models.Post).all()
+   # cursor.execute("""SELECT * FROM "Posts" """)
+   # posts = cursor.fetchall()
+
+    
+    return {'message': Postss}
 
 @app.post('/Posts', status_code=201) # Changing the default status code from 200 OK to 201 CREATED
-def create_post(Post: social_media_app):
-    cursor.execute("""INSERT INTO "Posts" (title, content, published) VALUES(%s, %s, %s) RETURNING *""",
-                    (Post.title, Post.content, Post.published))
-    new_post = cursor.fetchone()
-    conn.commit()
+def create_post(Post: social_media_app, db: Session = Depends(get_db)):
+    #cursor.execute("""INSERT INTO "Posts" (title, content, published) VALUES(%s, %s, %s) RETURNING *""",
+    #                (Post.title, Post.content, Post.published))
+    #new_post = cursor.fetchone()
+    #conn.commit() 
+    #new_post = models.Post(title=Post.title, content= Post.content, published = Post.published)
+    new_post = models.Post(**Post.dict())
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
     return {'message': new_post}
 
 
+@app.get("/Posts/sqlalchemy")
+def get_posts_sqlalchemy(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
+    return {'Data': posts}
+
+
 @app.get("/Posts/{id}")
-def get_post(id: int):
-    cursor.execute("""SELECT * FROM "Posts" WHERE id = %s""", (id,))
-    post = cursor.fetchone()
-    if not post:
+def get_post(id: int, db: Session = Depends(get_db)):
+   # cursor.execute("""SELECT * FROM "Posts" WHERE id = %s""", (id,))
+   # post = cursor.fetchone()
+    posts = db.query(models.Post).filter(models.Post.id == id).first()
+
+  
+
+    if not posts:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
-    return {"data": post}
+    return {"data": posts}
 
 
 
 @app.delete("/Post/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int):
-    cursor.execute("""DELETE FROM "Posts" WHERE id = %s RETURNING *""", (id,))
-    deleted = cursor.fetchone()
-    conn.commit()
-    if deleted is None:
+def delete_post(id: int, db: Session = Depends(get_db)):
+  #  cursor.execute("""DELETE FROM "Posts" WHERE id = %s RETURNING *""", (id,))
+  #  deleted = cursor.fetchone()
+  #  conn.commit()
+    deleted_post = db.query(models.Post).filter(models.Post.id == id)
+
+    if deleted_post.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
+    deleted_post.delete(synchronize_session = False)
+    db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.put("/Posts/{id}")
-def update_post(id: int, post: social_media_app):
-    cursor.execute("""UPDATE "Posts" SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
-                   (post.title, post.content, post.published, id))
-    updated_post = cursor.fetchone()
-    conn.commit()
-    if updated_post is None:
+def update_post(id: int, posts: social_media_app, db: Session = Depends(get_db)):
+    #cursor.execute("""UPDATE "Posts" SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
+    #               (post.title, post.content, post.published, id))
+    #updated_post = cursor.fetchone()
+    #conn.commit()
+
+    updated_post = db.query(models.Post).filter(models.Post.id == id)
+    if updated_post.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
-    return {"data": updated_post}
+    updated_post.update(posts.dict(), synchronize_session = False)
+    db.commit()
+    return {"data": updated_post.first()}
 
-
-@app.get("/sqlalchemy")
-def dummy(db : Session = Depends(get_db)):
-    return {'message':'Sucessfully'}
 

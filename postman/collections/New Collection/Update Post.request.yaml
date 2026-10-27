@@ -1,4 +1,15 @@
 $kind: http-request
-url: ""
-method: GET
+url: http://127.0.0.1:8000/Posts/6
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \    \"title\":\"Bsc information Engineering Technology\",\r
+
+    \    \"content\":\"Data Updated, degree name\"\r
+
+    \r
+
+    }"
 order: 1000
