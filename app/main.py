@@ -1,27 +1,16 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends
-from fastapi.params import Body
-from pydantic import BaseModel,Field
-from typing import Optional,Annotated
 from random import randrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 from sqlalchemy.orm import Session
-from . import models
+from . import models,Schema
 from .database import engine, SessionLocal, get_db, Base
 
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-
-
-class social_media_app(BaseModel):
-    title : Annotated[str, Field(description='Title is must')]
-    content : Optional[str] = None
-    published : bool = True
-    #rating : Annotated[int, Field(gt =0,lt=5, description="This is Optional field and rate between 1-5")] = Field(default=None)
 
 
 while True:   
@@ -49,19 +38,19 @@ def find_index(id):
         
 @app.get('/')
 def first():
-    return {'message': 'First! Endpoint hit'}
+    return 'First! Endpoint hit'
 
-@app.get('/Posts')
+@app.get("/Posts" , response_model=Schema.Post)
 def posts(db: Session = Depends(get_db)):
     Postss = db.query(models.Post).all()
    # cursor.execute("""SELECT * FROM "Posts" """)
    # posts = cursor.fetchall()
 
     
-    return {'message': Postss}
+    return Postss
 
-@app.post('/Posts', status_code=201) # Changing the default status code from 200 OK to 201 CREATED
-def create_post(Post: social_media_app, db: Session = Depends(get_db)):
+@app.post('/Posts', status_code=201, response_model=Schema.Post) # Changing the default status code from 200 OK to 201 CREATED
+def create_post(Post: Schema.PostCreate, db: Session = Depends(get_db)):
     #cursor.execute("""INSERT INTO "Posts" (title, content, published) VALUES(%s, %s, %s) RETURNING *""",
     #                (Post.title, Post.content, Post.published))
     #new_post = cursor.fetchone()
@@ -71,16 +60,16 @@ def create_post(Post: social_media_app, db: Session = Depends(get_db)):
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
-    return {'message': new_post}
+    return  new_post
 
 
-@app.get("/Posts/sqlalchemy")
-def get_posts_sqlalchemy(db: Session = Depends(get_db)):
+#@app.get("/Posts/sqlalchemy")
+#def get_posts_sqlalchemy(db: Session = Depends(get_db)):
     posts = db.query(models.Post).all()
-    return {'Data': posts}
+    return posts
 
 
-@app.get("/Posts/{id}")
+@app.get("/Posts/{id}",response_model=Schema.Post)
 def get_post(id: int, db: Session = Depends(get_db)):
    # cursor.execute("""SELECT * FROM "Posts" WHERE id = %s""", (id,))
    # post = cursor.fetchone()
@@ -90,7 +79,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
 
     if not posts:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
-    return {"data": posts}
+    return posts
 
 
 
@@ -101,25 +90,26 @@ def delete_post(id: int, db: Session = Depends(get_db)):
   #  conn.commit()
     deleted_post = db.query(models.Post).filter(models.Post.id == id)
 
-    if deleted_post.first() is None:
+    if deleted_post.first() == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
     deleted_post.delete(synchronize_session = False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.put("/Posts/{id}")
-def update_post(id: int, posts: social_media_app, db: Session = Depends(get_db)):
+@app.put("/Posts/{id}",response_model=Schema.Post)
+def update_post(id: int, posts: Schema.PostCreate, db: Session = Depends(get_db)):
     #cursor.execute("""UPDATE "Posts" SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
     #               (post.title, post.content, post.published, id))
     #updated_post = cursor.fetchone()
     #conn.commit()
 
     updated_post = db.query(models.Post).filter(models.Post.id == id)
-    if updated_post.first() is None:
+    if updated_post.first() == None: #updated_post.first() grabs the top entry 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
+    
     updated_post.update(posts.dict(), synchronize_session = False)
-    db.commit()
-    return {"data": updated_post.first()}
+    db.commit() #to save the changes we use commit
+    return updated_post.first()
 
 
