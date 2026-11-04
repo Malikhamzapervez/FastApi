@@ -1,8 +1,12 @@
 $kind: http-request
 description: ""
-url: http://127.0.0.1:8000/Posts
+url: http://127.0.0.1:8000/posts
 method: POST
 body:
   type: json
-  content: '{"title": "My New Post", "content": "This is the content of my new post."}'
+  content: '{"title": "PMD Islamabad", "content": "Job Description for ai in islamabad"}'
+auth:
+  type: bearer
+  credentials:
+    token: "{{json_web_token_0po9}}"
 order: 1000

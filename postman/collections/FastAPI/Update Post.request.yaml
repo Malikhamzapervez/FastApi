@@ -1,0 +1,20 @@
+$kind: http-request
+description: ""
+url: http://127.0.0.1:8000/posts/7
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \    \"title\":\"Bsc information Engineering Technology\",\r
+
+    \    \"content\":\"Data Updated, degree name\"\r
+
+    \r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{json_web_token_1cfx}}"
+order: 7000

@@ -1,1 +1,11 @@
 $kind: collection
+variables:
+  - key: post_id
+    value: "1"
+    disabled: false
+  - key: json_web_token_1cfx
+    secret: true
+    disabled: false
+  - key: json_web_token_0po9
+    secret: true
+    disabled: false

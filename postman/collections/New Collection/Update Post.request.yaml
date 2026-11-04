@@ -1,5 +1,5 @@
 $kind: http-request
-url: http://127.0.0.1:8000/Posts/6
+url: http://127.0.0.1:8000/posts/6
 method: PUT
 body:
   type: json
