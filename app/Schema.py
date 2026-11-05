@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field, EmailStr, conint
 from typing import Optional,Annotated
 from datetime import datetime
 
@@ -55,3 +55,8 @@ class TokenData(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class Vote(BaseModel):
+    post_id:int
+    dir: Annotated[int, Field(le=1)]
+
