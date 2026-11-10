@@ -40,6 +40,15 @@ class Post(PostBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class PostOut(BaseModel):
+    Post: Post
+    votes : int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+
+
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -59,4 +68,3 @@ class Token(BaseModel):
 class Vote(BaseModel):
     post_id:int
     dir: Annotated[int, Field(le=1)]
-

@@ -5,12 +5,14 @@ from sqlalchemy.orm import Session
 from .. import models, Schema
 from ..database import get_db
 from . import oauth2
+from sqlalchemy import func
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
 
-@router.get("", response_model=List[Schema.Post])
+#@router.get("", response_model=List[Schema.Post])
+@router.get("", response_model=List[Schema.PostOut])
 def posts(
     db: Session = Depends(get_db),
     user_id: Schema.TokenData = Depends(oauth2.get_current_user),
@@ -23,12 +25,15 @@ def posts(
         .filter(models.Post.owner_id == user_id.id)
         .filter(models.Post.title.contains(search))
         .limit(limit)
-        .offset(skip)
+        .offset(skip).all()
     )
    # cursor.execute("""SELECT * FROM "Posts" """)
    # posts = cursor.fetchall()
 
-    return post_query.all()
+    results = (
+        db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter = True). group_by(models.Post.id).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    )
+    return results
 
 @router.post("", status_code=201, response_model=Schema.Post)
 def create_post(post: Schema.PostCreate, db: Session = Depends(get_db), user_id: Schema.TokenData = Depends(oauth2.get_current_user)):
@@ -45,21 +50,22 @@ def create_post(post: Schema.PostCreate, db: Session = Depends(get_db), user_id:
 
 
 
-@router.get('/{id}', response_model=Schema.Post)
+@router.get('/{id}', response_model=Schema.PostOut)
 def get_post(id: int, db: Session = Depends(get_db), user_id: Schema.TokenData = Depends(oauth2.get_current_user)):
    # cursor.execute("""SELECT * FROM "Posts" WHERE id = %s""", (id,))
    # post = cursor.fetchone()
-    posts = db.query(models.Post).filter(models.Post.id == id).first()
+    #posts = db.query(models.Post).filter(models.Post.id == id).first()
 
+    post_result = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter = True). group_by(models.Post.id).filter(models.Post.id == id).first()
 
-
-    if not posts:
+    if not post_result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} was not found")
 
-    if posts.owner_id != user_id.id:
+    post, _ = post_result
+    if post.owner_id != user_id.id:
             raise HTTPException(status_code = status.HTTP_403_FORBIDDEN, detail = 'Not authorized to perfor, request action')
 
-    return posts
+    return post_result
 
 
 
